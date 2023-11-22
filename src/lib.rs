@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 /// Enumerator of the Event type. Whatever type E of Event::Args you implement here is the type E that will be used for the EventPublisher.
 #[repr(C)]
+#[derive(Debug)]
 pub enum Event<E> {
     Args(E),
     Missing,
