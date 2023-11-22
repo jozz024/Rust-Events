@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 
 /// Enumerator of the Event type. Whatever type E of Event::Args you implement here is the type E that will be used for the EventPublisher.
+#[repr(C)]
 pub enum Event<E> {
     Args(E),
     Missing,
@@ -12,9 +13,10 @@ pub enum Event<E> {
 /// EventPublisher. Works similarly to C#'s event publishing pattern. Event handling functions are subscribed to the publisher.
 /// Whenever the publisher fires an event it calls all subscribed event handler functions.
 /// Use event::EventPublisher::<E>::new() to construct
+#[repr(C)]
 pub struct EventPublisher<E> {
     //handlers: Vec<Rc<Box<Fn(&Event<E>) + 'static>>>,
-    handlers: BTreeMap<usize, fn(&Event<E>)>,
+    handlers: BTreeMap<usize, extern "C" fn(&Event<E>)>,
 }
 
 impl<E> EventPublisher<E> {
@@ -22,14 +24,14 @@ impl<E> EventPublisher<E> {
     /// Event publisher constructor.
     pub fn new() -> EventPublisher<E> {
         EventPublisher{ 
-            handlers: BTreeMap::<usize, fn(&Event<E>)>::new()
+            handlers: BTreeMap::<usize, extern "C" fn(&Event<E>)>::new()
         }
     }
     /// Subscribes event handler functions to the EventPublisher.
     /// INPUT:  handler: fn(&Event<E>) handler is a pointer to a function to handle an event of the type E. The function must
     ///     be capable of handling references to the event type set up by the publisher, rather than the raw event itself.
     /// OUTPUT: void
-    pub fn subscribe_handler(&mut self, handler: fn(&Event<E>)){
+    pub fn subscribe_handler(&mut self, handler: extern "C" fn(&Event<E>)){
         let p_handler: usize;
         unsafe{
             p_handler = *(handler as *const usize);
@@ -40,15 +42,12 @@ impl<E> EventPublisher<E> {
     /// Unsubscribes an event handler from the publisher.
     /// INPUT:  handler: fn(&Event<E>) handler is a pointer to a function to handle an event of the type E.
     /// OUTPUT: bool    output is a bool of whether or not the function was found in the list of subscribed event handlers and subsequently removed.
-    pub fn unsubscribe_handler(&mut self, handler: fn(&Event<E>)) -> bool {
+    pub fn unsubscribe_handler(&mut self, handler: extern "C" fn(&Event<E>)) -> bool {
         let p_handler: usize;
         unsafe{
             p_handler = *(handler as *const usize);
         }
-        match self.handlers.remove(&p_handler){
-            Some(_) => true,
-            None => false,
-        }
+        self.handlers.remove(&p_handler).is_some()
     }
         
     // TODO: Implement this concurrently
